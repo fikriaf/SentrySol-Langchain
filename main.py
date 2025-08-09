@@ -226,6 +226,170 @@ async def get_labels(wallet_address: str = Query(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/pre-transaction")
+async def pre_transaction_analysis(
+    input_data: AnalyzeInput,
+    direct_tool_execution: Optional[bool] = Query(
+        True,
+        description="Use direct tool execution (True) or agent-based execution (False)",
+    ),
+):
+    """
+    Analyze transaction data before execution for security screening
+    """
+    try:
+        # Ensure the analysis is marked as pre-transaction
+        if hasattr(input_data, "data") and input_data.data:
+            input_data.data["analysis_type"] = "pre_transaction"
+            input_data.data["direct_tool_execution"] = direct_tool_execution
+        else:
+            input_data.data = {
+                "analysis_type": "pre_transaction",
+                "direct_tool_execution": direct_tool_execution,
+            }
+
+        result = analyze(input_data)
+
+        # Add pre-transaction specific recommendations
+        if "analysis" in result:
+            if "recommendations" not in result["analysis"]:
+                result["analysis"]["recommendations"] = []
+
+            # Add pre-transaction specific recommendations
+            pre_tx_recommendations = []
+            if (
+                result.get("analysis", {}).get("security_scores", {}).get("risk_level")
+                == "HIGH"
+            ):
+                pre_tx_recommendations.extend(
+                    [
+                        "🚫 DO NOT PROCEED with this transaction",
+                        "⚠️ High risk detected - manual review required",
+                    ]
+                )
+            elif (
+                result.get("analysis", {}).get("security_scores", {}).get("risk_level")
+                == "CRITICAL"
+            ):
+                pre_tx_recommendations.extend(
+                    [
+                        "🛑 CRITICAL RISK - BLOCK TRANSACTION IMMEDIATELY",
+                        "🔒 Contact security team before any action",
+                    ]
+                )
+            else:
+                pre_tx_recommendations.extend(
+                    [
+                        "✅ Transaction appears safe to proceed",
+                        "📋 Continue with standard security protocols",
+                    ]
+                )
+
+            result["analysis"]["pre_transaction_recommendations"] = (
+                pre_tx_recommendations
+            )
+
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/check-wallet")
+async def check_wallet_only(
+    wallet_address: str = Query(..., description="Wallet address to analyze"),
+    chain: Optional[str] = Query(
+        "solana", description="Blockchain network (solana, ethereum, etc.)"
+    ),
+    direct_tool_execution: Optional[bool] = Query(
+        True,
+        description="Use direct tool execution (True) or agent-based execution (False)",
+    ),
+):
+    """
+    Check wallet security status only (no transaction analysis)
+    """
+    try:
+        # Create input data for wallet-only analysis
+        wallet_input = AnalyzeInput(
+            data={
+                "wallet_address": wallet_address,
+                "chain": chain,
+                "analysis_type": "wallet_only",
+                "direct_tool_execution": direct_tool_execution,
+            }
+        )
+
+        result = analyze(wallet_input)
+
+        # Filter result to focus on wallet-specific information
+        if "analysis" in result:
+            wallet_focused_result = {
+                "status": result.get("status"),
+                "wallet_address": wallet_address,
+                "chain": chain,
+                "wallet_analysis": {
+                    "wallet_screening": result["analysis"].get("wallet_screening"),
+                    "labels_and_domains": result["analysis"].get("labels_and_domains"),
+                    "security_scores": {
+                        "wallet_security_score": result["analysis"]
+                        .get("security_scores", {})
+                        .get("wallet_security_score"),
+                        "domain_security_score": result["analysis"]
+                        .get("security_scores", {})
+                        .get("domain_security_score"),
+                        "overall_security_score": result["analysis"]
+                        .get("security_scores", {})
+                        .get("overall_security_score"),
+                        "risk_level": result["analysis"]
+                        .get("security_scores", {})
+                        .get("risk_level"),
+                        "confidence_level": result["analysis"]
+                        .get("security_scores", {})
+                        .get("confidence_level"),
+                    },
+                    "wallet_recommendations": [
+                        rec
+                        for rec in result["analysis"].get("recommendations", [])
+                        if "wallet" in rec.lower() or "address" in rec.lower()
+                    ],
+                    "verification_status": result["analysis"].get(
+                        "verification_status"
+                    ),
+                    "professional_summary": result["analysis"].get(
+                        "professional_summary"
+                    ),
+                },
+                "meta": result.get("meta", {}),
+                "analysis_timestamp": result["analysis"].get("analysis_timestamp"),
+            }
+
+            # Add wallet-specific summary
+            wallet_focused_result["wallet_summary"] = {
+                "is_safe": result["analysis"]
+                .get("security_scores", {})
+                .get("risk_level")
+                in ["VERY_LOW", "LOW"],
+                "risk_level": result["analysis"]
+                .get("security_scores", {})
+                .get("risk_level"),
+                "confidence": f"{result['analysis'].get('security_scores', {}).get('confidence_level', 0)}%",
+                "recommendation": "APPROVED"
+                if result["analysis"].get("security_scores", {}).get("risk_level")
+                in ["VERY_LOW", "LOW"]
+                else "CAUTION"
+                if result["analysis"].get("security_scores", {}).get("risk_level")
+                == "MODERATE"
+                else "REJECTED",
+            }
+
+            return JSONResponse(content=wallet_focused_result)
+        else:
+            return JSONResponse(content=result)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     # Contoh input test untuk supervisor dengan professional scoring
     # Untuk test transaction analysis

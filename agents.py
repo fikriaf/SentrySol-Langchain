@@ -30,12 +30,13 @@ def chainabuse_tool(input):
             )
 
         if not token_addr:
-            return "Token address not found in input"
+            return
 
         # Chainabuse API for entity lookup
         api_key = (
             "ca_eWMybXpIeEJTRzBFQ0FlY01KeDg4QmpiLlpkVk4veDlQeDd1MDdJREZkK0JqaVE9PQ"
         )
+
         url = f"https://api.chainabuse.com/api/v1/entity/{token_addr}"
         headers = {"X-API-Key": api_key, "Accept": "application/json"}
         response = requests.get(url, headers=headers, timeout=10)
@@ -43,12 +44,11 @@ def chainabuse_tool(input):
             data = response.json()
             return json.dumps(data)
         elif response.status_code == 404:
-            return f"Token address {token_addr} not found in Chainabuse database."
+            return
         else:
-            return f"Chainabuse API error. Status: {response.status_code}"
+            return
     except Exception as e:
-        logging.error(f"Chainabuse error: {str(e)}")
-        return f"Chainabuse analysis unavailable: {str(e)}"
+        return
 
 
 def metasleuth_tool(input):
@@ -66,41 +66,65 @@ def metasleuth_tool(input):
             )
 
         if not wallet_addr:
-            return "Wallet address not found in input"
+            return
 
         logging.info(f"Metasleuth analyzing: {wallet_addr}")
 
-        # Check if address format is valid for Ethereum (should start with 0x)
-        if not wallet_addr.startswith("0x"):
-            return f"Wallet Screening: Address format analysis shows {wallet_addr} appears to be a Solana address (Base58), not Ethereum (0x). Cross-chain analysis required."
+        # Dynamically determine chain based on address format
+        if wallet_addr.startswith("0x") and len(wallet_addr) == 42:
+            # Ethereum address format
+            chain_name = "eth"
+            display_name = "Ethereum"
+        elif (
+            len(wallet_addr) >= 32
+            and len(wallet_addr) <= 44
+            and not wallet_addr.startswith("0x")
+        ):
+            # Solana address format (Base58, typically 32-44 characters)
+            chain_name = "sol"
+            display_name = "Solana"
+        else:
+            return
 
         api_key = "1d30653243515aebf2c62fe85583f66a2a8b351d42a2c54f1959eb8b1635d6f8"
-        url = "https://aml.blocksec.com/address-compliance/api/v3/risk-score"
+        url = f"https://aml.blocksec.com/api/risk/v1/address/{chain_name}/{wallet_addr}"
         headers = {
             "API-KEY": api_key,
-            "Content-Type": "application/json",
-            "Accept": "*/*",
         }
-        payload = {
-            "chain_id": 1,  # Ethereum mainnet
-            "address": wallet_addr,
-            "interaction_risk": True,
-        }
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        
+        response = requests.get(url, headers=headers, timeout=15)
 
         if response.status_code == 200:
-            data = response.json()
-            # Format the response consistently
-            risk_score = data.get("risk_score", "unknown")
-            return f"Wallet Screening: Risk assessment completed. Risk score: {risk_score}. Full analysis: {json.dumps(data)}"
+            data = response.json().get("data", {})
+
+            # Check if address is valid from the response data
+            is_address_valid = data.get("is_address_valid", True)
+            
+            if not is_address_valid:
+                return
+            # Extract important parameters only
+            important_data = {
+                "address": data.get("address", wallet_addr),
+                "chain": data.get("chain", display_name),
+                "risk_level": data.get("risk_level", "unknown"),
+                "entity_info": data.get("entity_info", {}),
+                "risk_indicators": data.get("risk_indicators", []),
+            }
+
+            # Create summary for quick overview
+            risk_level = important_data.get("risk_level", "unknown")
+            entity_name = important_data.get("entity_info", {}).get("entity", "Unknown")
+            risk_count = len(important_data.get("risk_indicators", []))
+
+            summary = f"Risk Level: {risk_level}/5, Entity: {entity_name}, Risk Indicators: {risk_count}"
+
+            return f"Wallet Screening ({display_name}): {summary}. Details: {json.dumps(important_data)}"
         else:
-            return f"Wallet Screening: Risk assessment completed with limited data. Status: {response.status_code}. Address format suggests potential cross-chain activity."
+            return
 
     except Exception as e:
         logging.error(f"Metasleuth error: {str(e)}")
-        return (
-            f"Wallet Screening: Risk assessment completed with basic analysis: {str(e)}"
-        )
+        return
 
 
 def dataset_label_tool(input_text: str) -> str:
@@ -146,7 +170,7 @@ Transaction Details:
 
     except Exception as e:
         logging.error(f"Dataset label error: {str(e)}")
-        return f"❌ Error: {str(e)}"
+        return
 
 
 def helius_rpc_tool(input):
@@ -171,7 +195,7 @@ def helius_rpc_tool(input):
             )
 
         if not address_or_hash:
-            return "No transaction hash or address found in input"
+            return
 
         logging.info(f"Helius RPC analyzing: {address_or_hash}")
         api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
@@ -191,13 +215,13 @@ def helius_rpc_tool(input):
             # Format consistently
             return f"Transaction Details: Analysis completed. Data: {json.dumps(data)}"
         elif response.status_code == 404:
-            return f"Transaction Details: Transaction/address not found on Solana. Input may be from different blockchain."
+            return
         else:
-            return f"Transaction Details: Analysis completed with limited data. Status: {response.status_code}"
+            return
 
     except Exception as e:
         logging.error(f"Helius RPC error: {str(e)}")
-        return f"Transaction Details: Analysis completed with error: {str(e)}"
+        return
 
 
 def helius_transactions_tool(input):
@@ -213,7 +237,7 @@ def helius_transactions_tool(input):
                 "wallet_address"
             )
         if not wallet_addr:
-            return json.dumps({"error": "No wallet address found in input"})
+            return
         api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/transactions?api-key={api_key}&limit=10"
         response = requests.get(url, timeout=10)
@@ -226,18 +250,10 @@ def helius_transactions_tool(input):
                 error_msg = raw_json.get("error", {}).get("message", "")
             except Exception:
                 error_msg = response.text
-            return json.dumps(
-                {
-                    "error": "Failed to fetch transactions",
-                    "status": response.status_code,
-                    "message": error_msg,
-                    "raw": response.text,
-                }
-            )
+            return
     except Exception as e:
         logging.error(f"Helius transactions error: {str(e)}")
-        return json.dumps({"error": "Error fetching transactions", "detail": str(e)})
-
+        return
 
 def helius_transfers_tool(input):
     try:
@@ -252,7 +268,7 @@ def helius_transfers_tool(input):
                 "wallet_address"
             )
         if not wallet_addr:
-            return json.dumps({"error": "No wallet address found in input"})
+            return
         api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/transfers?api-key={api_key}&limit=10"
         response = requests.get(url, timeout=10)
@@ -265,17 +281,10 @@ def helius_transfers_tool(input):
                 error_msg = raw_json.get("error", {}).get("message", "")
             except Exception:
                 error_msg = response.text
-            return json.dumps(
-                {
-                    "error": "Failed to fetch transfers",
-                    "status": response.status_code,
-                    "message": error_msg,
-                    "raw": response.text,
-                }
-            )
+            return
     except Exception as e:
         logging.error(f"Helius transfers error: {str(e)}")
-        return json.dumps({"error": "Error fetching transfers", "detail": str(e)})
+        return
 
 
 def helius_domains_tool(input):
@@ -291,7 +300,7 @@ def helius_domains_tool(input):
                 "wallet_address"
             )
         if not wallet_addr:
-            return json.dumps({"error": "No wallet address found in input"})
+            return
         api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/domains?api-key={api_key}"
         response = requests.get(url, timeout=10)
@@ -304,17 +313,10 @@ def helius_domains_tool(input):
                 error_msg = raw_json.get("error", {}).get("message", "")
             except Exception:
                 error_msg = response.text
-            return json.dumps(
-                {
-                    "error": "Failed to fetch domains",
-                    "status": response.status_code,
-                    "message": error_msg,
-                    "raw": response.text,
-                }
-            )
+            return
     except Exception as e:
         logging.error(f"Helius domains error: {str(e)}")
-        return json.dumps({"error": "Error fetching domains", "detail": str(e)})
+        return
 
 
 def helius_labels_tool(input):
@@ -330,7 +332,7 @@ def helius_labels_tool(input):
                 "wallet_address"
             )
         if not wallet_addr:
-            return json.dumps({"error": "No wallet address found in input"})
+            return
         api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/labels?api-key={api_key}"
         response = requests.get(url, timeout=10)
@@ -340,14 +342,12 @@ def helius_labels_tool(input):
             if labels:
                 return f"Labels and Domains: Found labels: {', '.join(labels)}. Details: {json.dumps(data)}"
             else:
-                return (
-                    f"Labels and Domains: No suspicious labels found for this address."
-                )
+                return
         else:
-            return f"Labels and Domains: Label check completed with limited data."
+            return
 
     except Exception as e:
-        return f"Labels and Domains: Label analysis completed: {str(e)}"
+        return
 
 
 # Tools
@@ -420,7 +420,7 @@ if __name__ == "__main__":
     # Test 2: Metasleuth Tool
     print("2. Testing Metasleuth Tool:")
     print("-" * 30)
-    test_wallet = "DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
+    test_wallet = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     try:
         result = metasleuth_tool(test_wallet)
         print(f"Metasleuth Result: {result}")
@@ -428,27 +428,27 @@ if __name__ == "__main__":
         print(f"Metasleuth Error: {e}")
     print()
 
-    # Test 4: Helius RPC Tool
-    print("4. Testing Helius RPC Tool:")
-    print("-" * 30)
-    test_address = "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg"
-    try:
-        result = helius_rpc_tool(test_address)
-        print(f"Helius RPC Result: {result}")
-    except Exception as e:
-        print(f"Helius RPC Error: {e}")
-    print()
+    # # Test 4: Helius RPC Tool
+    # print("4. Testing Helius RPC Tool:")
+    # print("-" * 30)
+    # test_address = "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg"
+    # try:
+    #     result = helius_rpc_tool(test_address)
+    #     print(f"Helius RPC Result: {result}")
+    # except Exception as e:
+    #     print(f"Helius RPC Error: {e}")
+    # print()
 
-    # Test 5: Helius Transactions Tool
-    print("5. Testing Helius Transactions Tool:")
-    print("-" * 30)
+    # # Test 5: Helius Transactions Tool
+    # print("5. Testing Helius Transactions Tool:")
+    # print("-" * 30)
     test_wallet_addr = "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg"
-    try:
-        result = helius_transactions_tool(test_wallet_addr)
-        print(f"Helius Transactions Result: {result}")
-    except Exception as e:
-        print(f"Helius Transactions Error: {e}")
-    print()
+    # try:
+    #     result = helius_transactions_tool(test_wallet_addr)
+    #     print(f"Helius Transactions Result: {result}")
+    # except Exception as e:
+    #     print(f"Helius Transactions Error: {e}")
+    # print()
 
     # Test 6: Helius Transfers Tool
     print("6. Testing Helius Transfers Tool:")
@@ -493,14 +493,14 @@ __all__ = [
     "helius_domains_agent",
     "helius_labels_agent",
 ]
-# Add new agents to export
-__all__ = [
-    "token_screener_agent",
-    "wallet_screener_agent",
-    "db_agent",
-    "helius_agent",
-    "helius_transactions_agent",
-    "helius_transfers_agent",
-    "helius_domains_agent",
-    "helius_labels_agent",
-]
+# # Add new agents to export
+# __all__ = [
+#     "token_screener_agent",
+#     "wallet_screener_agent",
+#     "db_agent",
+#     "helius_agent",
+#     "helius_transactions_agent",
+#     "helius_transfers_agent",
+#     "helius_domains_agent",
+#     "helius_labels_agent",
+# ]

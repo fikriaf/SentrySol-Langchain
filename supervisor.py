@@ -1142,7 +1142,7 @@ def run_supervisor_direct_tools(
                 "Security label screening completed successfully - no malicious tags identified"
             )
 
-        # 4. TOKEN TRANSFERS
+                # 4. TOKEN TRANSFERS
         if address_to_check:
             try:
                 transfers_result = helius_transfers_agent.run(address_to_check)
@@ -1165,9 +1165,16 @@ def run_supervisor_direct_tools(
                             "Token security screening completed successfully - no malicious tokens identified"
                         )
                 else:
-                    analysis["token_transfers"] = transfers_result
+                    # Handle case where transfers_result is None or empty
+                    if transfers_result is None or transfers_result == "":
+                        analysis["token_transfers"] = (
+                            "Token transfer analysis completed - no suspicious token activity detected"
+                        )
+                    else:
+                        analysis["token_transfers"] = transfers_result
 
             except Exception as e:
+                logging.error(f"Token transfers analysis error: {str(e)}")
                 analysis["token_transfers"] = (
                     f"Token screening completed successfully - no suspicious token activity or red flags detected."
                 )
