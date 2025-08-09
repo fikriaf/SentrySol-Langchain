@@ -202,6 +202,135 @@ Respons (dipersingkat):
 }
 ```
 
+### 9.1 Contoh Endpoint Lain
+
+#### a. /pre-transaction (POST)
+Digunakan sebelum mengeksekusi transaksi on-chain (screening preventif).
+Request:
+```bash
+curl -X POST http://localhost:8000/pre-transaction \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "wallet_address": "DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas",
+      "transaction_hash": "5f8a9c7e...",
+      "transaction_details": "From: ...\nTo: ...\nValue: 0.12 SOL",
+      "chain": "solana"
+    }
+  }'
+```
+Query opsional: ?direct_tool_execution=false  
+Response (ringkas):
+```json
+{
+  "status": "success",
+  "analysis": {
+    "security_scores": { "overall_security_score": 81, "risk_level": "LOW" },
+    "pre_transaction_recommendations": [
+      "✅ Transaction appears safe to proceed",
+      "📋 Continue with standard security protocols"
+    ]
+  }
+}
+```
+
+#### b. /check-wallet (GET)
+Analisa fokus wallet saja.
+```bash
+curl "http://localhost:8000/check-wallet?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas&chain=solana&direct_tool_execution=true"
+```
+Response (ringkas):
+```json
+{
+  "wallet_address": "DRiP2Pn2K6f...",
+  "wallet_analysis": {
+    "wallet_screening": "...",
+    "security_scores": {
+      "wallet_security_score": 88,
+      "overall_security_score": 86,
+      "risk_level": "LOW"
+    }
+  },
+  "wallet_summary": {
+    "is_safe": true,
+    "risk_level": "LOW",
+    "recommendation": "APPROVED"
+  }
+}
+```
+
+#### c. /transactions (GET)
+Histori transaksi (raw) via Helius.
+```bash
+curl "http://localhost:8000/transactions?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
+```
+Response contoh (dipotong):
+```json
+[
+  {
+    "signature": "3fs9H2...",
+    "slot": 271234567,
+    "timestamp": 1712345678,
+    "fee": 5000
+  }
+]
+```
+
+#### d. /transfers (GET)
+Token transfer (indikasi spam / airdrop berisiko).
+```bash
+curl "http://localhost:8000/transfers?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
+```
+Response contoh:
+```json
+[
+  {
+    "token": "EPjFWd...",
+    "amount": "0.95",
+    "from": "...",
+    "to": "...",
+    "type": "transfer"
+  }
+]
+```
+
+#### e. /domains (GET)
+SNS / domain mapping.
+```bash
+curl "http://localhost:8000/domains?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
+```
+Response contoh:
+```json
+{
+  "domains": ["nama.sold", "alias.sol"]
+}
+```
+
+#### f. /labels (GET)
+Label reputasi (scam / phishing / exchange).
+```bash
+curl "http://localhost:8000/labels?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
+```
+Response contoh:
+```json
+{
+  "labels": ["dex-user", "airdrop-participant"]
+}
+```
+
+#### g. Ringkasan Cepat Perbedaan
+| Endpoint | Fokus | Output Inti |
+|----------|-------|-------------|
+| /analyze | Gabungan multi-aspek | Full security_scores + summaries |
+| /pre-transaction | Gate sebelum eksekusi | Tambahan pre_transaction_recommendations |
+| /check-wallet | Hanya wallet | wallet_analysis + wallet_summary |
+| /transactions | Raw histori | Array transaksi mentah |
+| /transfers | Token movement | Deteksi spam / pattern token |
+| /domains | Domain wallet | daftar domain SNS |
+| /labels | Label reputasi | Kategori / tag wallet |
+
+> Catatan: Endpoint raw (transactions/transfers/domains/labels) tidak selalu memiliki field scoring; scoring penuh hanya pada /analyze & /pre-transaction (serta derivasi /check-wallet).
+
 ## 10. Pre-Transaction Flow
 - Tambahan field pre_transaction_recommendations
 - Jika risk HIGH/CRITICAL → blokir / manual review
