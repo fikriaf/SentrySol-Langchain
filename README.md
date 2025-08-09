@@ -1,3 +1,5 @@
+<h1 align="center">SentrySol-Langchain</h1># SentrySol-Langchain
+
 <!-- BADGES -->
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white">
@@ -29,7 +31,6 @@
 
 ---
 
-# SentrySol-Langchain
 
 Platform analisis keamanan Web3 (fokus Solana & multi-chain) yang memanfaatkan FastAPI + LangChain + multi-agent + LLM (Mistral) untuk:
 - Screening wallet & token
@@ -159,7 +160,7 @@ Interpretasi singkat:
 Query param penting:
 - direct_tool_execution=true/false
 
-## 9. Contoh Payload /analyze
+## 9. Endpoint /analyze
 Request:
 ```json
 {
@@ -203,7 +204,7 @@ Respons (dipersingkat):
 }
 ```
 
-### 9.1 Contoh Endpoint Lain
+### 9.1 Endpoint Lain
 
 #### a. /pre-transaction (POST)
 Digunakan sebelum mengeksekusi transaksi on-chain (screening preventif).
