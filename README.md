@@ -165,7 +165,8 @@ Request:
 {
   "data": {
     "wallet_address": "DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas",
-    "transaction_hash": "0x123abc...",
+    "transaction_hash": "ExampleTxHashOrSignatureHere",
+    "transaction_details": "From: ...\nTo: ...\nValue: 0.01 SOL",
     "chain": "solana",
     "direct_tool_execution": true
   }
@@ -207,56 +208,23 @@ Respons (dipersingkat):
 #### a. /pre-transaction (POST)
 Digunakan sebelum mengeksekusi transaksi on-chain (screening preventif).
 Request:
-```bash
-curl -X POST http://localhost:8000/pre-transaction \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "wallet_address": "DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas",
-      "transaction_hash": "5f8a9c7e...",
-      "transaction_details": "From: ...\nTo: ...\nValue: 0.12 SOL",
-      "chain": "solana"
-    }
-  }'
-```
-Query opsional: ?direct_tool_execution=false  
-Response (ringkas):
+Request:
 ```json
 {
-  "status": "success",
-  "analysis": {
-    "security_scores": { "overall_security_score": 81, "risk_level": "LOW" },
-    "pre_transaction_recommendations": [
-      "✅ Transaction appears safe to proceed",
-      "📋 Continue with standard security protocols"
-    ]
+  "data": {
+    "wallet_address": "BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf",
+    "chain": "solana",
+    "analysis_type": "pre_transaction",
+    "check_type": "destination_wallet"
   }
 }
 ```
+Query opsional: ?direct_tool_execution=false  
 
 #### b. /check-wallet (GET)
 Analisa fokus wallet saja.
 ```bash
 curl "http://localhost:8000/check-wallet?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas&chain=solana&direct_tool_execution=true"
-```
-Response (ringkas):
-```json
-{
-  "wallet_address": "DRiP2Pn2K6f...",
-  "wallet_analysis": {
-    "wallet_screening": "...",
-    "security_scores": {
-      "wallet_security_score": 88,
-      "overall_security_score": 86,
-      "risk_level": "LOW"
-    }
-  },
-  "wallet_summary": {
-    "is_safe": true,
-    "risk_level": "LOW",
-    "recommendation": "APPROVED"
-  }
-}
 ```
 
 #### c. /transactions (GET)
@@ -264,34 +232,11 @@ Histori transaksi (raw) via Helius.
 ```bash
 curl "http://localhost:8000/transactions?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
 ```
-Response contoh (dipotong):
-```json
-[
-  {
-    "signature": "3fs9H2...",
-    "slot": 271234567,
-    "timestamp": 1712345678,
-    "fee": 5000
-  }
-]
-```
 
 #### d. /transfers (GET)
 Token transfer (indikasi spam / airdrop berisiko).
 ```bash
 curl "http://localhost:8000/transfers?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
-```
-Response contoh:
-```json
-[
-  {
-    "token": "EPjFWd...",
-    "amount": "0.95",
-    "from": "...",
-    "to": "...",
-    "type": "transfer"
-  }
-]
 ```
 
 #### e. /domains (GET)
@@ -299,23 +244,11 @@ SNS / domain mapping.
 ```bash
 curl "http://localhost:8000/domains?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
 ```
-Response contoh:
-```json
-{
-  "domains": ["nama.sold", "alias.sol"]
-}
-```
 
 #### f. /labels (GET)
 Label reputasi (scam / phishing / exchange).
 ```bash
 curl "http://localhost:8000/labels?wallet_address=DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
-```
-Response contoh:
-```json
-{
-  "labels": ["dex-user", "airdrop-participant"]
-}
 ```
 
 #### g. Ringkasan Cepat Perbedaan
