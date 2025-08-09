@@ -1,0 +1,12 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+requests==2.32.3
+pydantic==1.10.15
+langchain==0.2.6
+langchain-mistralai==0.1.7
+python-dotenv==1.0.1
+typing-extensions>=4.8.0
+tqdm>=4.66.0
+# Optional (dev)
+black==24.4.2
+ruff==0.5.5

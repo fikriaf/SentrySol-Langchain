@@ -5,7 +5,10 @@ from langchain.prompts import PromptTemplate
 import requests
 import json
 import logging
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 logging.basicConfig(
     filename="agents.log",
@@ -21,21 +24,18 @@ def chainabuse_tool(input):
         # Handle JSON input
         if isinstance(input, str) and input.startswith("{"):
             data = json.loads(input)
-            token_addr = data.get("token_address") or data.get("data", {}).get(
-                "token_address"
-            )
+            token_addr = data.get("token_address") or data.get("data", {}).get("token_address")
         elif isinstance(input, dict):
-            token_addr = input.get("token_address") or input.get("data", {}).get(
-                "token_address"
-            )
+            token_addr = input.get("token_address") or input.get("data", {}).get("token_address")
 
         if not token_addr:
             return
 
         # Chainabuse API for entity lookup
-        api_key = (
-            "ca_eWMybXpIeEJTRzBFQ0FlY01KeDg4QmpiLlpkVk4veDlQeDd1MDdJREZkK0JqaVE9PQ"
-        )
+        api_key = os.getenv("CHAINABUSE_API_KEY")
+        if not api_key:
+            logging.warning("CHAINABUSE_API_KEY missing")
+            return
 
         url = f"https://api.chainabuse.com/api/v1/entity/{token_addr}"
         headers = {"X-API-Key": api_key, "Accept": "application/json"}
@@ -57,13 +57,9 @@ def metasleuth_tool(input):
         # Handle JSON input
         if isinstance(input, str) and input.startswith("{"):
             data = json.loads(input)
-            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get("wallet_address")
         elif isinstance(input, dict):
-            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get("wallet_address")
 
         if not wallet_addr:
             return
@@ -75,23 +71,23 @@ def metasleuth_tool(input):
             # Ethereum address format
             chain_name = "eth"
             display_name = "Ethereum"
-        elif (
-            len(wallet_addr) >= 32
-            and len(wallet_addr) <= 44
-            and not wallet_addr.startswith("0x")
-        ):
+        elif len(wallet_addr) >= 32 and len(wallet_addr) <= 44 and not wallet_addr.startswith("0x"):
             # Solana address format (Base58, typically 32-44 characters)
             chain_name = "sol"
             display_name = "Solana"
         else:
             return
 
-        api_key = "1d30653243515aebf2c62fe85583f66a2a8b351d42a2c54f1959eb8b1635d6f8"
+        api_key = os.getenv("BLOCKSEC_API_KEY")
+        if not api_key:
+            logging.warning("BLOCKSEC_API_KEY missing")
+            return
+
         url = f"https://aml.blocksec.com/api/risk/v1/address/{chain_name}/{wallet_addr}"
         headers = {
             "API-KEY": api_key,
         }
-        
+
         response = requests.get(url, headers=headers, timeout=15)
 
         if response.status_code == 200:
@@ -99,7 +95,7 @@ def metasleuth_tool(input):
 
             # Check if address is valid from the response data
             is_address_valid = data.get("is_address_valid", True)
-            
+
             if not is_address_valid:
                 return
             # Extract important parameters only
@@ -116,7 +112,9 @@ def metasleuth_tool(input):
             entity_name = important_data.get("entity_info", {}).get("entity", "Unknown")
             risk_count = len(important_data.get("risk_indicators", []))
 
-            summary = f"Risk Level: {risk_level}/5, Entity: {entity_name}, Risk Indicators: {risk_count}"
+            summary = (
+                f"Risk Level: {risk_level}/5, Entity: {entity_name}, Risk Indicators: {risk_count}"
+            )
 
             return f"Wallet Screening ({display_name}): {summary}. Details: {json.dumps(important_data)}"
         else:
@@ -134,8 +132,19 @@ def dataset_label_tool(input_text: str) -> str:
 
         logging.info(f"Dataset label input: {input_text}")
 
-        # Siapkan API
-        api_key = "mBng7pAtolwotaZRyOQxB5RclArjyM4P"
+        api_key = os.getenv("MISTRAL_API_KEY")
+        if not api_key:
+            logging.warning("MISTRAL_API_KEY missing for dataset_label_tool")
+            return
+
+        # Prefer specific fine-tuned model env var, fallback to generic model, then last resort default
+        model_id = (
+            os.getenv("MISTRAL_DATASET_MODEL") or os.getenv("MISTRAL_MODEL") or "mistral-medium"
+        )
+        if not model_id:
+            logging.warning("Mistral model env var missing (MISTRAL_DATASET_MODEL / MISTRAL_MODEL)")
+            return
+
         url = "https://api.mistral.ai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -149,7 +158,7 @@ Transaction Details:
 {input_text}"""
 
         payload = {
-            "model": "ft:mistral-medium-latest:b319469f:20250807:b80c0dce",
+            "model": model_id,
             "messages": [
                 {
                     "role": "system",
@@ -198,7 +207,10 @@ def helius_rpc_tool(input):
             return
 
         logging.info(f"Helius RPC analyzing: {address_or_hash}")
-        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        api_key = os.getenv("HELIUS_API_KEY")
+        if not api_key:
+            logging.warning("HELIUS_API_KEY missing")
+            return
 
         # Check if it's a transaction hash (longer) or address
         if len(address_or_hash) > 50:  # Likely a transaction hash
@@ -229,16 +241,15 @@ def helius_transactions_tool(input):
         wallet_addr = input
         if isinstance(input, str) and input.startswith("{"):
             data = json.loads(input)
-            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get("wallet_address")
         elif isinstance(input, dict):
-            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get("wallet_address")
         if not wallet_addr:
             return
-        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        api_key = os.getenv("HELIUS_API_KEY")
+        if not api_key:
+            logging.warning("HELIUS_API_KEY missing")
+            return
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/transactions?api-key={api_key}&limit=10"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
@@ -255,21 +266,21 @@ def helius_transactions_tool(input):
         logging.error(f"Helius transactions error: {str(e)}")
         return
 
+
 def helius_transfers_tool(input):
     try:
         wallet_addr = input
         if isinstance(input, str) and input.startswith("{"):
             data = json.loads(input)
-            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get("wallet_address")
         elif isinstance(input, dict):
-            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get("wallet_address")
         if not wallet_addr:
             return
-        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        api_key = os.getenv("HELIUS_API_KEY")
+        if not api_key:
+            logging.warning("HELIUS_API_KEY missing")
+            return
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/transfers?api-key={api_key}&limit=10"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
@@ -292,16 +303,15 @@ def helius_domains_tool(input):
         wallet_addr = input
         if isinstance(input, str) and input.startswith("{"):
             data = json.loads(input)
-            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get("wallet_address")
         elif isinstance(input, dict):
-            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get("wallet_address")
         if not wallet_addr:
             return
-        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        api_key = os.getenv("HELIUS_API_KEY")
+        if not api_key:
+            logging.warning("HELIUS_API_KEY missing")
+            return
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/domains?api-key={api_key}"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
@@ -324,16 +334,15 @@ def helius_labels_tool(input):
         wallet_addr = input
         if isinstance(input, str) and input.startswith("{"):
             data = json.loads(input)
-            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get("wallet_address")
         elif isinstance(input, dict):
-            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
-                "wallet_address"
-            )
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get("wallet_address")
         if not wallet_addr:
             return
-        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        api_key = os.getenv("HELIUS_API_KEY")
+        if not api_key:
+            logging.warning("HELIUS_API_KEY missing")
+            return
         url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/labels?api-key={api_key}"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:

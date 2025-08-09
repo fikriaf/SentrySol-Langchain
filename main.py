@@ -6,6 +6,8 @@ from supervisor import run_supervisor
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 import uvicorn
+import os
+from dotenv import load_dotenv
 
 from agents import (
     helius_transactions_agent,
@@ -13,6 +15,9 @@ from agents import (
     helius_domains_agent,
     helius_labels_agent,
 )
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(
@@ -43,9 +48,7 @@ def analyze(
     # Extract direct_tool_execution parameter from input data
     direct_tool_execution = data.get("direct_tool_execution", True)  # Default to True
 
-    logging.info(
-        f"Input diterima: {payload}, direct_tool_execution: {direct_tool_execution}"
-    )
+    logging.info(f"Input diterima: {payload}, direct_tool_execution: {direct_tool_execution}")
     try:
         result = run_supervisor(
             payload, auth_token=None, direct_tool_execution=direct_tool_execution
@@ -80,9 +83,9 @@ def analyze(
                 analysis.get("transaction_details")
                 and "Transaction Details:" in analysis["transaction_details"]
             ):
-                analysis["transaction_details"] = analysis[
-                    "transaction_details"
-                ].replace("Transaction Details: ", "")
+                analysis["transaction_details"] = analysis["transaction_details"].replace(
+                    "Transaction Details: ", ""
+                )
 
             # Clean up labels_and_domains
             if (
@@ -110,9 +113,7 @@ def analyze(
 
             # Truncate conclusion if too long
             if analysis.get("conclusion") and len(analysis["conclusion"]) > 200:
-                analysis["conclusion"] = (
-                    analysis["conclusion"][:200] + "... (truncated)"
-                )
+                analysis["conclusion"] = analysis["conclusion"][:200] + "... (truncated)"
 
             # Add professional formatting for security scores
             if "security_scores" in analysis:
@@ -257,10 +258,7 @@ async def pre_transaction_analysis(
 
             # Add pre-transaction specific recommendations
             pre_tx_recommendations = []
-            if (
-                result.get("analysis", {}).get("security_scores", {}).get("risk_level")
-                == "HIGH"
-            ):
+            if result.get("analysis", {}).get("security_scores", {}).get("risk_level") == "HIGH":
                 pre_tx_recommendations.extend(
                     [
                         "🚫 DO NOT PROCEED with this transaction",
@@ -285,9 +283,7 @@ async def pre_transaction_analysis(
                     ]
                 )
 
-            result["analysis"]["pre_transaction_recommendations"] = (
-                pre_tx_recommendations
-            )
+            result["analysis"]["pre_transaction_recommendations"] = pre_tx_recommendations
 
         return JSONResponse(content=result)
     except Exception as e:
@@ -352,12 +348,8 @@ async def check_wallet_only(
                         for rec in result["analysis"].get("recommendations", [])
                         if "wallet" in rec.lower() or "address" in rec.lower()
                     ],
-                    "verification_status": result["analysis"].get(
-                        "verification_status"
-                    ),
-                    "professional_summary": result["analysis"].get(
-                        "professional_summary"
-                    ),
+                    "verification_status": result["analysis"].get("verification_status"),
+                    "professional_summary": result["analysis"].get("professional_summary"),
                 },
                 "meta": result.get("meta", {}),
                 "analysis_timestamp": result["analysis"].get("analysis_timestamp"),
@@ -365,20 +357,15 @@ async def check_wallet_only(
 
             # Add wallet-specific summary
             wallet_focused_result["wallet_summary"] = {
-                "is_safe": result["analysis"]
-                .get("security_scores", {})
-                .get("risk_level")
+                "is_safe": result["analysis"].get("security_scores", {}).get("risk_level")
                 in ["VERY_LOW", "LOW"],
-                "risk_level": result["analysis"]
-                .get("security_scores", {})
-                .get("risk_level"),
+                "risk_level": result["analysis"].get("security_scores", {}).get("risk_level"),
                 "confidence": f"{result['analysis'].get('security_scores', {}).get('confidence_level', 0)}%",
                 "recommendation": "APPROVED"
                 if result["analysis"].get("security_scores", {}).get("risk_level")
                 in ["VERY_LOW", "LOW"]
                 else "CAUTION"
-                if result["analysis"].get("security_scores", {}).get("risk_level")
-                == "MODERATE"
+                if result["analysis"].get("security_scores", {}).get("risk_level") == "MODERATE"
                 else "REJECTED",
             }
 
@@ -471,7 +458,7 @@ if __name__ == "__main__":
 #     print("\n=== Test 3: Transaction Tracing ===")
 #     tx_trace = AnalyzeInput(
 #         data={
-#             "transaction_hash": "5VqJZ8fjhk8gn8MXvXvVcVvXvVcVvXvVcVvXvVcVvXvVcVvXvVcVvXvVcVvXvV",
+#             "transaction_hash": "5VqJZ8fjhk8gn8MXvXvVcVvXvVcVvXvVcVvXvVcVvXvVcVvXvVcVvXvV",
 #             "wallet_address": "DRiP2Pn2K6fuMLKQmt5rZWyHiUZ6zDvNrjggrE3wTBas"
 #         },
 #         params={"analysis_type": "tx_trace"}

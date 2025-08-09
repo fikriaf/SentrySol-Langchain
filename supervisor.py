@@ -16,6 +16,11 @@ from agents import (
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from concurrent.futures import ThreadPoolExecutor
+# NEW: env + os
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(
     filename="supervisor.log",
@@ -23,7 +28,15 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
-llm = ChatMistralAI(api_key="mBng7pAtolwotaZRyOQxB5RclArjyM4P", model="mistral-medium")
+# REPLACE hard-coded llm initialization with env-driven version
+# old:
+# llm = ChatMistralAI(api_key="mBng7pAtolwotaZRyOQxB5RclArjyM4P", model="mistral-medium")
+mistral_api_key = os.getenv("MISTRAL_API_KEY")
+mistral_model = os.getenv("MISTRAL_MODEL", "mistral-medium")
+if not mistral_api_key:
+    logging.error("MISTRAL_API_KEY not set in environment.")
+    raise ValueError("Missing MISTRAL_API_KEY environment variable")
+llm = ChatMistralAI(api_key=mistral_api_key, model=mistral_model)
 
 tools = [
     token_screener_agent,
@@ -1765,49 +1778,36 @@ def run_supervisor_agent_based(user_input, auth_token=None):
         return json.dumps(output, ensure_ascii=False, indent=2)
 
 
-def run_supervisor(user_input, auth_token=None, direct_tool_execution=True):
-    """Main supervisor function with configurable execution method"""
-    start_time = datetime.now()
-    try:
-        return run_supervisor_direct_tools(
-            user_input, auth_token, direct_tool_execution
-        )
-    except Exception as e:
-        processing_time = (datetime.now() - start_time).total_seconds()  # Calculate processing_time here
-        logging.error(f"Supervisor execution failed: {str(e)}")
-        # Fallback error response
-        error_analysis = {
-            "status": "error",
-            "input": user_input,
-            "error": str(e),
-            "processing_time_seconds": round(processing_time, 2),  # Now processing_time is defined
-            "analysis_timestamp": datetime.now().isoformat(),
-            "analysis": {
-                "what": "Analysis failed due to system error",
-                "how": f"Error occurred: {str(e)}",
-                "who": "Web3 security analysis system",
-                "wallet_screening": "Analysis failed",
-                "transaction_details": "Analysis failed",
-                "labels_and_domains": "Analysis failed",
-                "token_transfers": "Analysis failed",
-                "security_assessment": f"System error prevented complete analysis: {str(e)}",
-                "verification_status": [
-                    "Retry analysis",
-                    "Check input format",
-                    "Contact system administrator",
-                ],
-            },
-            "meta": {
-                "agent": "SentrySol Supervisor",
-                "tools_used": [tool.name for tool in tools],
-                "auth": bool(auth_token),
-                "direct_tool_execution": direct_tool_execution,
-                "error": str(e),
-            },
-            "features_enabled": {
-                "dynamic_summary": False,
-                "professional_scoring": False,
-                "error_occurred": True,
+def run_supervisor_batch(inputs, auth_token=None, direct_tool_execution=True):
+    results = []
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(run_supervisor, inp, auth_token, direct_tool_execution)
+            for inp in inputs
+        ]
+        for future in futures:
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logging.error(f"Error batch: {str(e)}")
+                results.append(json.dumps({"status": "error", "error": str(e)}))
+    return results
+
+
+def run_supervisor_batch(inputs, auth_token=None, direct_tool_execution=True):
+    results = []
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(run_supervisor, inp, auth_token, direct_tool_execution)
+            for inp in inputs
+        ]
+        for future in futures:
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logging.error(f"Error batch: {str(e)}")
+                results.append(json.dumps({"status": "error", "error": str(e)}))
+    return results
             }
         }
         return json.dumps(error_analysis, ensure_ascii=False, indent=2)

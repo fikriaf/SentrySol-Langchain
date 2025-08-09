@@ -284,9 +284,40 @@ Lalu modifikasi agents.py & supervisor.py untuk membaca via os.getenv.
 ```
 python -m venv .venv
 source .venv/Scripts/activate (Windows: .venv\Scripts\activate)
-pip install -r requirements.txt   # (buat file kalau belum)
-uvicorn main:app --reload
+pip install -r requirements.txt
+# atau (editable install)
+pip install -e .
 ```
+
+## 12.1 Environment Variables
+Buat file `.env` (lihat `.env.example`):
+```
+CP=cp .env.example .env  # Linux/Mac
+```
+Isi sesuai API keys Anda.
+
+## 12.2 Jalankan Aplikasi
+```
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+## 12.3 Docker
+Build & run:
+```
+docker build -t sentrysol .
+docker run --env-file .env -p 8000:8000 sentrysol
+```
+
+## 12.4 Health Quick Test
+```
+curl -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d '{"data":{"wallet_address":"<WALLET>","chain":"solana"}}'
+```
+
+## 21. Deployment Notes
+- Semua kunci API sudah dipanggil lewat `os.getenv()`.
+- Jika MISTRAL_API_KEY tidak ada → inisialisasi LLM akan gagal dan sistem fallback mencatat log error.
+- Gunakan process manager (pm2 / systemd / ECS / K8s) untuk produksi.
+- Set `PYTHONUNBUFFERED=1` agar log realtime di container.
 
 ## 13. Ekstensi / Kustomisasi
 Tambahkan tool baru:

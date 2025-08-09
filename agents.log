@@ -6018,3 +6018,137 @@ WHO: The analysis utilized multiple agents including Token Screener, Wallet...
     "execution_time_seconds": 11.53
   }
 }
+2025-08-09 14:22:49,525 INFO Input diterima: {'wallet_address': 'BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf', 'transaction_hash': None, 'transaction_details': None, 'chain': 'solana'}, direct_tool_execution: True
+2025-08-09 14:22:49,537 INFO Analysis started: {"wallet_address": "BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf", "transaction_hash": null, "transa...
+2025-08-09 14:22:51,566 INFO HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-09 14:22:51,577 INFO Detected input type: wallet_analysis
+2025-08-09 14:22:51,595 INFO Metasleuth analyzing: BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf
+2025-08-09 14:22:54,192 INFO Dataset label input: {"wallet_address": "BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf", "transaction_hash": null, "transaction_details": null, "chain": "solana"}
+2025-08-09 14:23:06,482 INFO Generating dynamic summary using LLM...
+2025-08-09 14:23:08,414 INFO HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-09 14:23:08,418 INFO LLM summary response: WHAT: A comprehensive security analysis was conducted on a Solana wallet address to assess legitimacy and detect potential threats.
+WHO: The analysis was performed by multiple automated agents includi...
+2025-08-09 14:23:08,419 INFO Parsed dynamic summary: {'what': 'Comprehensive wallet analysis security analysis performed', 'who': 'SentrySol Web3 security analysis system with integrated ML models', 'how': 'Multi-tool analysis using 8 specialized security agents with positive verification results'}
+2025-08-09 14:23:08,420 INFO Dynamic summary generated successfully: {'what': 'Comprehensive wallet analysis security analysis performed', 'who': 'SentrySol Web3 security analysis system with integrated ML models', 'how': 'Multi-tool analysis using 8 specialized security agents with positive verification results'}
+2025-08-09 14:23:08,420 INFO Calculating security scores using LLM...
+2025-08-09 14:23:11,645 INFO HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-09 14:23:11,648 INFO LLM scoring response: ```json
+{
+    "overall_security_score": 92,
+    "wallet_security_score": 90,
+    "transaction_security_score": 95,
+    "token_security_score": 95,
+    "domain_security_score": 90,
+    "confidence_leve...
+2025-08-09 14:23:11,649 INFO LLM scores parsed successfully: Overall=92, Risk=VERY_LOW
+2025-08-09 14:23:11,649 INFO LLM security scores calculated: Overall=92, Risk=VERY_LOW
+2025-08-09 14:23:11,649 INFO Generating professional recommendations...
+2025-08-09 14:23:11,650 INFO Generated 6 recommendations
+2025-08-09 14:23:11,650 INFO Generating professional executive summary...
+2025-08-09 14:23:11,651 INFO Executive summary generated with grade: A
+2025-08-09 14:23:11,651 INFO Analysis completed successfully in 22.12s - Risk Level: VERY_LOW, Score: 92, Grade: A
+2025-08-09 14:23:11,657 INFO Hasil analisa: {
+  "status": "success",
+  "input": {
+    "wallet_address": "BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf",
+    "transaction_hash": null,
+    "transaction_details": null,
+    "chain": "solana"
+  },
+  "analysis": {
+    "wallet_screening": "Wallet screening completed successfully - address verified as legitimate with no security concerns identified.",
+    "transaction_details": "Transaction security assessment completed - no malicious patterns detected",
+    "labels_and_domains": "Address verification completed - no suspicious labels or warning indicators found.",
+    "token_transfers": "Token transfer analysis completed - no suspicious token activity detected",
+    "security_assessment": "Security analysis completed successfully: Wallet verification passed. ML Assessment: \U0001f50d Transaction Analysis\n\n**Security Threat Analysis:**\n- **Wallet Address Check:** The provided wallet address `BQjmJq8EVptiTn5XbWHDA6FyeXC6qkijAjN6UojED1Mf` is not a valid Ethereum address. It appears to be a Solana address.\n- **Chain Mismatch:** The transaction is specified to be on the Solana chain, not Ethereum.\n\n**Malicious Determination:**\n- **Invalid Ethereum Address:** Since the address is not valid for Ethereum, it cannot be analyzed as an Ethereum transaction.\n- **Potential Misconfiguration:** The transaction details and hash are missing, which could indicate a misconfiguration or an attempt to obfuscate the transaction details.\n\n**Conclusion:**\n- **Not Applicable for Ethereum:** The transaction cannot be analyzed as an Ethereum transaction due to the invalid address and chain mismatch.\n- **Recommendation:** Verify the wallet address and ensure it matches the intended blockchain (Ethereum). If analyzing a Solana transaction, use appropriate tools and methods for Solana blockchain analysis.",
+    "verification_status": [
+      "Comprehensive security analysis passed all checks",
+      "No suspicious activity or red flags detected",
+      "Transaction and wallet verified as legitimate"
+    ],
+    "what": "Comprehensive wallet analysis security analysis performed",
+    "who": "SentrySol Web3 security analysis system with integrated ML models",
+    "how": "Multi-tool analysis using 8 specialized security agents with positive verification results",
+    "security_scores": {
+      "overall_security_score": 92,
+      "wallet_security_score": 90,
+      "transaction_security_score": 95,
+      "token_security_score": 95,
+      "domain_security_score": 90,
+      "confidence_level": 90,
+      "risk_level": "VERY_LOW",
+      "threat_indicators": [],
+      "positive_indicators": [
+        "Legitimate wallet address",
+        "No suspicious transaction patterns",
+        "No malicious token activity",
+        "No suspicious domains or labels"
+      ],
+      "compliance_score": 95,
+      "reputation_score": 90
+    },
+    "recommendations": [
+      "\U0001f7e2 VERY LOW RISK: Minimal security concerns",
+      "\u2705 Approved for normal operations",
+      "\U0001f3c6 High confidence in security assessment",
+      "\U0001f4cb Add to trusted entities list",
+      "\U0001f3af High security score indicates trustworthy interaction",
+      "\u2728 Multiple positive security indicators confirmed"
+    ],
+    "professional_summary": {
+      "executive_summary": "\U0001f7e2 Security Assessment Complete: VERY_LOW risk level identified with 90% confidence. Overall security score: 92/100.",
+      "key_metrics": {
+        "security_grade": "A",
+        "threat_level": "VERY_LOW",
+        "confidence_rating": "High",
+        "positive_signals": 4,
+        "risk_signals": 0,
+        "compliance_status": "COMPLIANT"
+      },
+      "risk_breakdown": {
+        "wallet_risk": "Low",
+        "transaction_risk": "Low",
+        "token_risk": "Low",
+        "domain_risk": "Low"
+      }
+    },
+    "analysis_timestamp": "2025-08-09T14:23:11.651811",
+    "analysis_version": "2.1.0",
+    "features_enabled": {
+      "dynamic_summary": true,
+      "professional_scoring": true,
+      "llm_powered_insights": true,
+      "risk_assessment": true,
+      "compliance_checking": true
+    },
+    "processing_time_seconds": 22.12,
+    "system_health": "System healthy - 8 agents available",
+    "execution_summary": {
+      "dynamic_summary_status": "success",
+      "scoring_status": "success",
+      "recommendations_count": 6,
+      "tools_executed": 8,
+      "confidence_level": 90
+    }
+  },
+  "meta": {
+    "agent": "SentrySol Supervisor",
+    "tools_used": [
+      "Token Screener Agent",
+      "Wallet Screener Agent",
+      "DB Agent",
+      "Helius Agent",
+      "Helius Transactions Agent",
+      "Helius Transfers Agent",
+      "Helius Domains Agent",
+      "Helius Labels Agent"
+    ],
+    "auth": false,
+    "analysis_type": "wallet_analysis",
+    "direct_tool_execution": true,
+    "dynamic_summary": true,
+    "professional_scoring": true,
+    "scoring_version": "2.1.0",
+    "execution_time_seconds": 22.12
+  }
+}
