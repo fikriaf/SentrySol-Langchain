@@ -1,4 +1,4 @@
-<h1 align="center">SentrySol-Langchain</h1># SentrySol-Langchain
+<h1 align="center">SentrySol-Langchain</h1>
 
 <!-- BADGES -->
 <p align="center">
