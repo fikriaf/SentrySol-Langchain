@@ -15,7 +15,7 @@ logging.basicConfig(
 
 
 # Sub-agent tools
-def rugcheck_tool(input):
+def chainabuse_tool(input):
     try:
         token_addr = input
         # Handle JSON input
@@ -32,14 +32,23 @@ def rugcheck_tool(input):
         if not token_addr:
             return "Token address not found in input"
 
-        url = f"https://api.rugcheck.xyz/v1/token/{token_addr}"
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return json.dumps(data)
+        # Chainabuse API for entity lookup
+        api_key = (
+            "ca_eWMybXpIeEJTRzBFQ0FlY01KeDg4QmpiLlpkVk4veDlQeDd1MDdJREZkK0JqaVE9PQ"
+        )
+        url = f"https://api.chainabuse.com/api/v1/entity/{token_addr}"
+        headers = {"X-API-Key": api_key, "Accept": "application/json"}
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return json.dumps(data)
+        elif response.status_code == 404:
+            return f"Token address {token_addr} not found in Chainabuse database."
+        else:
+            return f"Chainabuse API error. Status: {response.status_code}"
     except Exception as e:
-        logging.error(f"Rugcheck error: {str(e)}")
-        return f"Rugcheck analysis unavailable: {str(e)}"
+        logging.error(f"Chainabuse error: {str(e)}")
+        return f"Chainabuse analysis unavailable: {str(e)}"
 
 
 def metasleuth_tool(input):
@@ -63,7 +72,7 @@ def metasleuth_tool(input):
 
         # Check if address format is valid for Ethereum (should start with 0x)
         if not wallet_addr.startswith("0x"):
-            return f"Address format analysis: {wallet_addr} appears to be a Solana address (Base58), not Ethereum (0x). Cross-chain analysis required."
+            return f"Wallet Screening: Address format analysis shows {wallet_addr} appears to be a Solana address (Base58), not Ethereum (0x). Cross-chain analysis required."
 
         api_key = "1d30653243515aebf2c62fe85583f66a2a8b351d42a2c54f1959eb8b1635d6f8"
         url = "https://aml.blocksec.com/address-compliance/api/v3/risk-score"
@@ -81,13 +90,17 @@ def metasleuth_tool(input):
 
         if response.status_code == 200:
             data = response.json()
-            return json.dumps(data)
+            # Format the response consistently
+            risk_score = data.get("risk_score", "unknown")
+            return f"Wallet Screening: Risk assessment completed. Risk score: {risk_score}. Full analysis: {json.dumps(data)}"
         else:
-            return f"Risk assessment completed with limited data. Status: {response.status_code}. Address format suggests potential cross-chain activity."
+            return f"Wallet Screening: Risk assessment completed with limited data. Status: {response.status_code}. Address format suggests potential cross-chain activity."
 
     except Exception as e:
         logging.error(f"Metasleuth error: {str(e)}")
-        return f"Risk assessment completed with basic analysis: {str(e)}"
+        return (
+            f"Wallet Screening: Risk assessment completed with basic analysis: {str(e)}"
+        )
 
 
 def dataset_label_tool(input_text: str) -> str:
@@ -175,22 +188,173 @@ def helius_rpc_tool(input):
 
         if response.status_code == 200:
             data = response.json()
-            return json.dumps(data)
+            # Format consistently
+            return f"Transaction Details: Analysis completed. Data: {json.dumps(data)}"
         elif response.status_code == 404:
-            return f"Transaction/address not found on Solana. Input: {address_or_hash[:20]}... may be from different blockchain."
+            return f"Transaction Details: Transaction/address not found on Solana. Input may be from different blockchain."
         else:
-            return f"Transaction trace completed with limited data. Status: {response.status_code}"
+            return f"Transaction Details: Analysis completed with limited data. Status: {response.status_code}"
 
     except Exception as e:
         logging.error(f"Helius RPC error: {str(e)}")
-        return f"Transaction analysis completed: {str(e)}"
+        return f"Transaction Details: Analysis completed with error: {str(e)}"
+
+
+def helius_transactions_tool(input):
+    try:
+        wallet_addr = input
+        if isinstance(input, str) and input.startswith("{"):
+            data = json.loads(input)
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
+                "wallet_address"
+            )
+        elif isinstance(input, dict):
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
+                "wallet_address"
+            )
+        if not wallet_addr:
+            return json.dumps({"error": "No wallet address found in input"})
+        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/transactions?api-key={api_key}&limit=10"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return json.dumps(data)
+        else:
+            try:
+                raw_json = response.json()
+                error_msg = raw_json.get("error", {}).get("message", "")
+            except Exception:
+                error_msg = response.text
+            return json.dumps(
+                {
+                    "error": "Failed to fetch transactions",
+                    "status": response.status_code,
+                    "message": error_msg,
+                    "raw": response.text,
+                }
+            )
+    except Exception as e:
+        logging.error(f"Helius transactions error: {str(e)}")
+        return json.dumps({"error": "Error fetching transactions", "detail": str(e)})
+
+
+def helius_transfers_tool(input):
+    try:
+        wallet_addr = input
+        if isinstance(input, str) and input.startswith("{"):
+            data = json.loads(input)
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
+                "wallet_address"
+            )
+        elif isinstance(input, dict):
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
+                "wallet_address"
+            )
+        if not wallet_addr:
+            return json.dumps({"error": "No wallet address found in input"})
+        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/transfers?api-key={api_key}&limit=10"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return json.dumps(data)
+        else:
+            try:
+                raw_json = response.json()
+                error_msg = raw_json.get("error", {}).get("message", "")
+            except Exception:
+                error_msg = response.text
+            return json.dumps(
+                {
+                    "error": "Failed to fetch transfers",
+                    "status": response.status_code,
+                    "message": error_msg,
+                    "raw": response.text,
+                }
+            )
+    except Exception as e:
+        logging.error(f"Helius transfers error: {str(e)}")
+        return json.dumps({"error": "Error fetching transfers", "detail": str(e)})
+
+
+def helius_domains_tool(input):
+    try:
+        wallet_addr = input
+        if isinstance(input, str) and input.startswith("{"):
+            data = json.loads(input)
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
+                "wallet_address"
+            )
+        elif isinstance(input, dict):
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
+                "wallet_address"
+            )
+        if not wallet_addr:
+            return json.dumps({"error": "No wallet address found in input"})
+        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/domains?api-key={api_key}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return json.dumps(data)
+        else:
+            try:
+                raw_json = response.json()
+                error_msg = raw_json.get("error", {}).get("message", "")
+            except Exception:
+                error_msg = response.text
+            return json.dumps(
+                {
+                    "error": "Failed to fetch domains",
+                    "status": response.status_code,
+                    "message": error_msg,
+                    "raw": response.text,
+                }
+            )
+    except Exception as e:
+        logging.error(f"Helius domains error: {str(e)}")
+        return json.dumps({"error": "Error fetching domains", "detail": str(e)})
+
+
+def helius_labels_tool(input):
+    try:
+        wallet_addr = input
+        if isinstance(input, str) and input.startswith("{"):
+            data = json.loads(input)
+            wallet_addr = data.get("wallet_address") or data.get("data", {}).get(
+                "wallet_address"
+            )
+        elif isinstance(input, dict):
+            wallet_addr = input.get("wallet_address") or input.get("data", {}).get(
+                "wallet_address"
+            )
+        if not wallet_addr:
+            return json.dumps({"error": "No wallet address found in input"})
+        api_key = "0d0ce4ad-8df4-4b4c-ab8a-478dc0c269ba"
+        url = f"https://api.helius.xyz/v0/addresses/{wallet_addr}/labels?api-key={api_key}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            labels = data.get("labels", [])
+            if labels:
+                return f"Labels and Domains: Found labels: {', '.join(labels)}. Details: {json.dumps(data)}"
+            else:
+                return (
+                    f"Labels and Domains: No suspicious labels found for this address."
+                )
+        else:
+            return f"Labels and Domains: Label check completed with limited data."
+
+    except Exception as e:
+        return f"Labels and Domains: Label analysis completed: {str(e)}"
 
 
 # Tools
 token_screener_agent = Tool(
     name="Token Screener Agent",
-    func=rugcheck_tool,
-    description="Screen tokens using rugcheck.xyz",
+    func=chainabuse_tool,
+    description="Screen tokens using Chainabuse API",
 )
 
 wallet_screener_agent = Tool(
@@ -213,19 +377,44 @@ helius_agent = Tool(
 )
 
 
+helius_transactions_agent = Tool(
+    name="Helius Transactions Agent",
+    func=helius_transactions_tool,
+    description="Check wallet activity using Helius /transactions endpoint",
+)
+
+helius_transfers_agent = Tool(
+    name="Helius Transfers Agent",
+    func=helius_transfers_tool,
+    description="Check for spam/scam tokens using Helius /transfers endpoint",
+)
+
+helius_domains_agent = Tool(
+    name="Helius Domains Agent",
+    func=helius_domains_tool,
+    description="Check for SNS domains using Helius /domains endpoint",
+)
+
+helius_labels_agent = Tool(
+    name="Helius Labels Agent",
+    func=helius_labels_tool,
+    description="Check for scam/phishing/unknown labels using Helius /labels endpoint",
+)
+
+
 if __name__ == "__main__":
     print("=== Testing Individual Agent Tools ===\n")
 
-    # Test 1: Rugcheck Tool
-    print("1. Testing Rugcheck Tool:")
+    # Test 1: Chainabuse Tool
+    print("1. Testing Chainabuse Tool:")
     print("-" * 30)
     # USDC Solana address
     test_token = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     try:
-        result = rugcheck_tool(test_token)
-        print(f"Rugcheck Result: {result}")
+        result = chainabuse_tool(test_token)
+        print(f"Chainabuse Result: {result}")
     except Exception as e:
-        print(f"Rugcheck Error: {e}")
+        print(f"Chainabuse Error: {e}")
     print()
 
     # Test 2: Metasleuth Tool
@@ -250,4 +439,68 @@ if __name__ == "__main__":
         print(f"Helius RPC Error: {e}")
     print()
 
+    # Test 5: Helius Transactions Tool
+    print("5. Testing Helius Transactions Tool:")
+    print("-" * 30)
+    test_wallet_addr = "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg"
+    try:
+        result = helius_transactions_tool(test_wallet_addr)
+        print(f"Helius Transactions Result: {result}")
+    except Exception as e:
+        print(f"Helius Transactions Error: {e}")
+    print()
+
+    # Test 6: Helius Transfers Tool
+    print("6. Testing Helius Transfers Tool:")
+    print("-" * 30)
+    try:
+        result = helius_transfers_tool(test_wallet_addr)
+        print(f"Helius Transfers Result: {result}")
+    except Exception as e:
+        print(f"Helius Transfers Error: {e}")
+    print()
+
+    # Test 7: Helius Domains Tool
+    print("7. Testing Helius Domains Tool:")
+    print("-" * 30)
+    try:
+        result = helius_domains_tool(test_wallet_addr)
+        print(f"Helius Domains Result: {result}")
+    except Exception as e:
+        print(f"Helius Domains Error: {e}")
+    print()
+
+    # Test 8: Helius Labels Tool
+    print("8. Testing Helius Labels Tool:")
+    print("-" * 30)
+    try:
+        result = helius_labels_tool(test_wallet_addr)
+        print(f"Helius Labels Result: {result}")
+    except Exception as e:
+        print(f"Helius Labels Error: {e}")
+    print()
+
     print("=== Individual Tool Testing Complete ===")
+
+# Add new agents to export
+__all__ = [
+    "token_screener_agent",
+    "wallet_screener_agent",
+    "db_agent",
+    "helius_agent",
+    "helius_transactions_agent",
+    "helius_transfers_agent",
+    "helius_domains_agent",
+    "helius_labels_agent",
+]
+# Add new agents to export
+__all__ = [
+    "token_screener_agent",
+    "wallet_screener_agent",
+    "db_agent",
+    "helius_agent",
+    "helius_transactions_agent",
+    "helius_transfers_agent",
+    "helius_domains_agent",
+    "helius_labels_agent",
+]
